@@ -687,7 +687,7 @@ impl OpenFangKernel {
         }
 
         // Initialize hand registry (curated autonomous packages)
-        let mut hand_registry = openfang_hands::registry::HandRegistry::new();
+        let hand_registry = openfang_hands::registry::HandRegistry::new();
         let hand_count = hand_registry.load_bundled();
         if hand_count > 0 {
             info!("Loaded {hand_count} bundled hand(s)");
@@ -5031,6 +5031,24 @@ impl KernelHandle for OpenFangKernel {
         Ok(result)
     }
 
+    async fn hand_install(
+        &self,
+        toml_content: &str,
+        skill_content: &str,
+    ) -> Result<serde_json::Value, String> {
+        let def = self
+            .hand_registry
+            .install_from_content(toml_content, skill_content)
+            .map_err(|e| format!("{e}"))?;
+
+        Ok(serde_json::json!({
+            "id": def.id,
+            "name": def.name,
+            "description": def.description,
+            "category": format!("{:?}", def.category),
+        }))
+    }
+
     async fn hand_activate(
         &self,
         hand_id: &str,
@@ -5057,8 +5075,8 @@ impl KernelHandle for OpenFangKernel {
             .ok_or_else(|| format!("No active instance found for hand '{hand_id}'"))?;
 
         let def = self.hand_registry.get_definition(hand_id);
-        let def_name = def.map(|d| d.name.clone()).unwrap_or_default();
-        let def_icon = def.map(|d| d.icon.clone()).unwrap_or_default();
+        let def_name = def.as_ref().map(|d| d.name.clone()).unwrap_or_default();
+        let def_icon = def.as_ref().map(|d| d.icon.clone()).unwrap_or_default();
 
         Ok(serde_json::json!({
             "hand_id": hand_id,
